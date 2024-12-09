@@ -6,12 +6,11 @@ const associationSchema = mongoose.Schema({
   description: String,
   siret: Number,
   email: String,
-  phone: Number,
-  streetAdress: String,
+  phone: String,
+  streetAddress: String,
   city: String,
   zipcode: Number,
   categories: [String],
-  token: String,
 });
 
 const Association = mongoose.model("associations", associationSchema);
