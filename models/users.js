@@ -1,8 +1,16 @@
 const mongoose = require("mongoose");
 
 const userSchema = mongoose.Schema({
-  //   lastName: String,
-  //   email: String,
+  isAssociationOwner: Boolean,
+  firstname: String,
+  lastname: String,
+  email: String,
+  password: String,
+  birthday: Date,
+  zipcode: Number,
+  token: String,
+  likedEvents: { type: mongoose.Schema.Types.ObjectId, ref: "events" },
+  followingAssociation: { type: mongoose.Schema.Types.ObjectId, ref: "associations" },
 });
 
 const User = mongoose.model("users", userSchema);
