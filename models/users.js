@@ -9,8 +9,8 @@ const userSchema = mongoose.Schema({
   birthday: Date,
   zipcode: Number,
   token: String,
-  likedEvents: { type: mongoose.Schema.Types.ObjectId, ref: "events" },
-  followingAssociation: { type: mongoose.Schema.Types.ObjectId, ref: "associations" },
+  likedEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: "events" }],
+  followingAssociations: [{ type: mongoose.Schema.Types.ObjectId, ref: "associations" }],
 });
 
 const User = mongoose.model("users", userSchema);
