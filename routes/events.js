@@ -87,13 +87,14 @@ router.delete("/delete", async (req, res) => {
         error: "event _id and token are required to delete an event from the database",
       });
     }
-    const event = await Event.findOne({ _id: req.body._id })
-      .populate("organiser")
-      .populate("owner");
+    const event = await Event.findOne({ _id: req.body._id }).populate({
+      path: "organiser",
+      populate: { path: "owner" },
+    });
     if (!event) {
       return res.json({ result: false, error: "event _id not found in the database" });
     }
-    if (event.organiser.token !== req.body.token) {
+    if (event.organiser.owner.token !== req.body.token) {
       return res.json({
         result: false,
         error: "cannot delete, current user is not the event owner",
@@ -108,88 +109,8 @@ router.delete("/delete", async (req, res) => {
     }
   } catch (error) {
     console.error("Error while deleting event:", error);
-    res.json({ result: false, error: "an unexpected error occurred" });
+    res.json({ result: false, error: error });
   }
-});
-
-//AJOUTER UN LIKE A UN TWEET DE LA BDD A PARTIR DE SON _ID
-
-router.post("/addLike", async (req, res) => {
-  // Vérification des paramètres requis
-  if (!checkBody(req.body, ["_id", "token"])) {
-    return res.json({
-      result: false,
-      error: "_id & token are required to add a like to a tweet in the database",
-    });
-  }
-
-  const tweet = await Tweet.findOne({ _id: req.body._id });
-
-  if (!tweet) {
-    return res.json({ result: false, error: "Tweet _id not found in the database" });
-  }
-  // Vérification si l'utilisateur existe
-  const user = await User.findOne({ token: req.body.token });
-  if (!user) {
-    return res.json({ result: false, error: "User token not found in the database" });
-  }
-  // Vérification si l'utilisateur a déjà liké le tweet
-  const userAlreadyLiked = tweet.likedByUserToken.some((item) => item == req.body.token);
-
-  if (userAlreadyLiked) {
-    return res.json({ result: false, error: "User has already liked this tweet" });
-  }
-  // AJOUT DU USER TOKEN AU TABLEAU likedByUserToken
-  const updatedTweet = await Tweet.findOneAndUpdate(
-    { _id: req.body._id },
-    {
-      $inc: { likeCounter: 1 }, // Incrémentation du compteur de likes
-      $push: { likedByUserToken: req.body.token },
-    },
-    { new: true } // Renvoie le tweet mis à jour
-  );
-  // REPONSE
-  res.json({ result: true, tweetUpdated: updatedTweet });
-});
-
-//SUPPRIMER UN LIKE D'UN TWEET DE LA BDD A PARTIR DE SON _ID
-
-router.post("/removeLike", async (req, res) => {
-  // Vérification des paramètres requis
-  if (!checkBody(req.body, ["_id", "token"])) {
-    return res.json({
-      result: false,
-      error: "_id & token are required to remove a like to a tweet in the database",
-    });
-  }
-
-  const tweet = await Tweet.findOne({ _id: req.body._id });
-
-  if (!tweet) {
-    return res.json({ result: false, error: "Tweet _id not found in the database" });
-  }
-  // Vérification si l'utilisateur existe
-  const user = await User.findOne({ token: req.body.token });
-  if (!user) {
-    return res.json({ result: false, error: "User token not found in the database" });
-  }
-  // Vérification si l'utilisateur a déjà liké le tweet
-  const userAlreadyLiked = tweet.likedByUserToken.some((item) => item == req.body.token);
-
-  if (!userAlreadyLiked) {
-    return res.json({ result: false, error: "User has not liked this tweet" });
-  }
-  // SUPPRESSION DU USER TOKEN DU TABLEAU likedByUserToken
-  const updatedTweet = await Tweet.findOneAndUpdate(
-    { _id: req.body._id },
-    {
-      $inc: { likeCounter: -1 }, // Incrémentation du compteur de likes
-      $pull: { likedByUserToken: req.body.token },
-    },
-    { new: true } // Renvoie le tweet mis à jour
-  );
-  // REPONSE
-  res.json({ result: true, tweetUpdated: updatedTweet });
 });
 
 module.exports = router;
