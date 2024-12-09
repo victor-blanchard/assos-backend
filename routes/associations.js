@@ -55,4 +55,34 @@ router.post("/create", (req, res) => {
   });
 });
 
-module.exports = router;
+
+router.delete("/delete", async (req, res) => {
+    // Validation des champs requis dans le corps de la requête
+    if (!checkBody(req.body, ['token', 'siret'])) {
+      res.status(400).json({ result: false, error: "Missing or empty 'id' field" });
+      return;
+    }
+  
+  
+    // Vérification si l'association existe avant de la supprimer
+    const asso = await Association.findOne({ siret: req.body.siret })
+    .populate('owner')
+
+        if (!asso) {
+          res.json({ result: false, error: 'Asso not found' });
+          return;
+        }
+        if(asso.owner.token !== req.body.token) {
+            res.json({ result: false, error: 'User not allowed to delete Asso'});
+            return;
+        }
+
+const deletedDoc = await Association.deleteOne({ siret: req.body.siret });
+if (deletedDoc.deletedCount > 0) {
+    return res.json({result:true, message: "asso successfully deleted "})
+}
+  else {
+    return res.json({result:false, error: "asso could not be deleted "})
+  }
+})
+  module.exports = router;
