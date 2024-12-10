@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const addressSchema = mongoose.Schema({
   street: String,
   city: String,
-  zipcode: Number,
+  zipcode: String,
 });
 
 const eventSchema = mongoose.Schema({
@@ -13,7 +13,6 @@ const eventSchema = mongoose.Schema({
   limitDate: Date,
   name: String,
   description: String,
-  isOpenToSubscription: Boolean,
   address: addressSchema,
   status: String,
   categories: [String],

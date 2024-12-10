@@ -30,7 +30,6 @@ router.post("/add", async (req, res) => {
       "limitDate",
       "name",
       "description",
-      "isOpenToSubsciption",
       "street",
       "zipcode",
       "city",
@@ -58,7 +57,6 @@ router.post("/add", async (req, res) => {
       limitDate: req.body.limitDate,
       name: req.body.name,
       description: req.body.description,
-      isOpenToSubsciption: req.body.isOpenToSubsciption,
       address: { street: req.body.street, city: req.body.city, zipcode: req.body.zipcode },
       status: req.body.status,
       categories: req.body.categories,
@@ -112,6 +110,131 @@ router.delete("/delete", async (req, res) => {
   } catch (error) {
     console.error("Error while deleting event:", error);
     res.json({ result: false, error: error });
+  }
+});
+
+// ROUTE DE MISE A JOUR UNIQUEMENT DES CHAMPS ENVOYES EN BODY
+router.put("/update/:id", async (req, res) => {
+  const id = req.params.id; // Corrigé pour extraire directement l'ID comme chaîne
+  const updates = req.body;
+
+  try {
+    // Vérifie la structure du corps de la requête
+    if (!checkBody(req.body, ["token"])) {
+      return res.status(400).json({
+        result: false,
+        error: "Event ID and token are required to update an event in the database",
+      });
+    }
+
+    // Récupère l'événement avec les relations nécessaires
+    const event = await Event.findById(id).populate({
+      path: "organiser",
+      populate: { path: "owner" },
+    });
+
+    if (!event) {
+      return res.status(404).json({
+        result: false,
+        error: "Event not found in the database",
+      });
+    }
+
+    // Vérifie si l'utilisateur est le propriétaire
+    if (event.organiser.owner.token !== req.body.token) {
+      return res.status(403).json({
+        result: false,
+        error: "Permission denied: current user is not the event owner",
+        ownertoken: event.organiser.owner.token,
+      });
+    }
+
+    // Met à jour les champs spécifiés dans le body uniquement
+    const updatedEvent = await Event.findByIdAndUpdate(
+      id,
+      { $set: updates },
+      { new: true, runValidators: true } // Renvoie l'événement mis à jour et applique les validateurs qui assure que le shéma est respecté
+    );
+
+    if (!updatedEvent) {
+      return res.status(404).json({
+        result: false,
+        error: "Event not found after update",
+      });
+    }
+
+    res.status(200).json({ result: true, event: updatedEvent });
+  } catch (error) {
+    res.status(500).json({
+      result: false,
+      error: error.message,
+    });
+  }
+});
+
+router.get("/filtered", async (req, res) => {
+  try {
+    // Récupération des filtres depuis les query params
+    const { categories, target, isOpenToSubscription, startDate, endDate, location, keyword } =
+      req.query;
+
+    // Construction de l'objet de filtre
+    let filters = {};
+
+    // Filtrer par catégories multiples
+    if (categories) {
+      const categoriesArray = categories.split(",");
+      filters.categories = { $in: categoriesArray }; // Mongoose : catégorie dans le tableau
+    }
+
+    if (keyword) {
+      const regex = new RegExp(keyword, "i"); // Crée une expression régulière insensible à la casse
+      filters.$or = [
+        { name: regex }, // Rechercher le mot-clé dans la propriété name
+        { description: regex }, // Rechercher le mot-clé dans la propriété `description`
+      ];
+    }
+
+    if (target) {
+      const targetArray = target.split(",");
+      filters.target = { $in: targetArray };
+    }
+
+    if (startDate) {
+      filters.startDate = { $gte: new Date(startDate) };
+    }
+
+    if (endDate) {
+      filters.endDate = { $lte: new Date(endDate) };
+    }
+
+    if (location) {
+      const response = await fetch(
+        `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(location)}`
+      );
+      const data = await response.json();
+
+      if (!data.features || data.features.length === 0) {
+        return res.json({ result: false, error: "Ville non trouvée." });
+      }
+
+      const firstCity = data.features[0];
+      const searchedCity = {
+        name: firstCity.properties.city,
+        zipcode: firstCity.properties.postcode,
+      };
+
+      filters["address.zipcode"] = { $regex: `^${searchedCity.zipcode.slice(0, 2)}` };
+    }
+
+    // Recherche avec Mongoose
+    const events = await Event.find(filters).populate("organiser");
+
+    // Réponse JSON
+    res.status(200).json({ result: true, filters: filters, events: events });
+  } catch (error) {
+    console.error("Erreur dans le filtrage :", error);
+    res.status(500).json({ error: "Une erreur est survenue." });
   }
 });
 
