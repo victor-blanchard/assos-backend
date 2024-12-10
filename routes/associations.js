@@ -16,7 +16,7 @@ router.post("/create", (req, res) => {
       "siret",
       "email",
       "phone",
-      "stretAddress",
+      "streetAddress",
       "city",
       "zipcode",
       "categories",
@@ -39,7 +39,7 @@ router.post("/create", (req, res) => {
         streetAddress: req.body.streetAddress,
         city: req.body.city,
         zipcode: req.body.zipcode,
-        categories: req.body.categories,
+        categories: req.body.categories, 
       });
 
       newAssociation.save().then((newDoc) => {
@@ -59,7 +59,7 @@ router.post("/create", (req, res) => {
 router.delete("/delete", async (req, res) => {
     // Validation des champs requis dans le corps de la requête
     if (!checkBody(req.body, ['token', 'siret'])) {
-      res.status(400).json({ result: false, error: "Missing or empty 'id' field" });
+      res.status(400).json({ result: false, error: "Missing or empty field" });
       return;
     }
   
@@ -85,4 +85,35 @@ if (deletedDoc.deletedCount > 0) {
     return res.json({result:false, error: "asso could not be deleted "})
   }
 })
+
+
+router.put('/update', async (req, res) => {
+    if (!checkBody(req.body, ['token', 'siret'])) {
+      res.json({ result: false, error: 'Missing or empty fields' });
+      return;
+    }
+  
+    // Vérification si l'association existe avant de la modifier
+    const asso = await Association.findOne({ siret: req.body.siret })
+    .populate('owner')
+
+        if (!asso) {
+          res.json({ result: false, error: 'Asso not found' });
+          return;
+        }
+        if(asso.owner.token !== req.body.token) {
+            res.json({ result: false, error: 'User not allowed to update Asso'});
+            return;
+        }
+        
+            // Mise à jour des données de l'association
+            const updatedAsso = await Association.findOneAndUpdate({ siret: req.body.siret }, {$set: updateFields},
+                { new: true }) // Retourner le document mis à jour)
+    
+            if (updatedAsso) {
+              res.json({ result: true, message: "Asso successfully updated", asso: updatedAsso });
+            } else {
+              res.status(500).json({ result: false, error: "Failed to update Asso" });
+}})
+
   module.exports = router;
