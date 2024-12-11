@@ -9,7 +9,16 @@ const bcrypt = require("bcrypt");
 const uid2 = require("uid2");
 
 router.post("/signup", (req, res) => {
-  if (!checkBody(req.body, ["firstname", "lastname", "email", "password", "birthday", "zipcode"])) {
+  if (
+    !checkBody(req.body, [
+      "firstname",
+      "lastname",
+      "email",
+      "password",
+      "birthday",
+      "zipcode",
+    ])
+  ) {
     res.json({ result: false, error: "Missing or empty fields" });
     return;
   }
@@ -105,5 +114,52 @@ router.post("/signin", (req, res) => {
       }
     });
 });
+
+//// MEHMET TRAVAILLE A PARTIR DE CETTE LIGNE///////////////////////////////////////////
+
+router.put("/update/:id", async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    if ((token = req.body.token)) {
+      return res.status(403).json({
+        result: false,
+        error: "Permission denied",
+      });
+    }
+
+    // Define which fields to be updated
+    const updateFields = {
+      firstname: req.body.firstname,
+      lastname: req.body.lastname,
+      email: req.body.email,
+      birthday: req.body.birthday,
+      zipcode: req.body.zipcode,
+      likedEvents: req.body.likedEvents,
+      followingAssociations: req.body.followingAssociations,
+    };
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateFields },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
+
+    res.json({
+      result: true,
+      message: "User successfully updated",
+      currentUser: updatedUser,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ result: false, error: "Failed to update user" });
+  }
+});
+
+/// MEHMET TRAVAILLE JUSQUA CETTE LIGNE/////////////////////////////
 
 module.exports = router;
