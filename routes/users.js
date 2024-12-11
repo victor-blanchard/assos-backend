@@ -52,6 +52,7 @@ router.post("/signup", (req, res) => {
             email: newDoc.email,
             birthday: newDoc.birthday,
             zipcode: newDoc.zipcode,
+            _id: newDoc._id,
           });
         });
       }

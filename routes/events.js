@@ -49,7 +49,7 @@ router.post("/add", async (req, res) => {
       res.json({ result: false, error: "User token not found in database" });
       return;
     }
-
+    const categoriesArray = req.body.categories.split(","); //permet de regrouper les categories de l'association dans un tableau
     const newEvent = new Event({
       organiser: req.body.organiser,
       startDate: req.body.startDate,
@@ -59,7 +59,7 @@ router.post("/add", async (req, res) => {
       description: req.body.description,
       address: { street: req.body.street, city: req.body.city, zipcode: req.body.zipcode },
       status: req.body.status,
-      categories: req.body.categories,
+      categories: categoriesArray,
       slotsAvailable: req.body.slotsAvailable,
       target: req.body.target,
       // userPhoto: "profilePicture.jpg",
@@ -149,6 +149,13 @@ router.put("/update/:id", async (req, res) => {
       });
     }
 
+    if (updates.categories) {
+      updates.categories = updates.categories
+        .replace(/^\[|\]$/g, "") // Supprimer les crochets [ et ]
+        .split(",") // Séparer les valeurs par des virgules
+        .map((item) => item.trim()); // Supprimer les espaces autour des valeurs
+    }
+
     // Met à jour les champs spécifiés dans le body uniquement
     const updatedEvent = await Event.findByIdAndUpdate(
       id,
@@ -175,8 +182,7 @@ router.put("/update/:id", async (req, res) => {
 router.get("/filtered", async (req, res) => {
   try {
     // Récupération des filtres depuis les query params
-    const { categories, target, isOpenToSubscription, startDate, endDate, location, keyword } =
-      req.query;
+    const { categories, target, isOpenToSubscription, date, location, keyword } = req.query;
 
     // Construction de l'objet de filtre
     let filters = {};
@@ -200,13 +206,17 @@ router.get("/filtered", async (req, res) => {
       filters.target = { $in: targetArray };
     }
 
-    if (startDate) {
-      filters.startDate = { $gte: new Date(startDate) };
+    if (date) {
+      filters.startDate = { $lte: new Date(date) }; //filtre si la date de début est inférieur à la date selectionée
+      filters.endDate = { $gte: new Date(date) }; //filtre si la date de fin est supérieur à la date selectionée
     }
+    // if (startDate) {
+    //   filters.startDate = { $gte: new Date(startDate) };
+    // }
 
-    if (endDate) {
-      filters.endDate = { $lte: new Date(endDate) };
-    }
+    // if (endDate) {
+    //   filters.endDate = { $lte: new Date(endDate) };
+    // }
 
     if (location) {
       const response = await fetch(
