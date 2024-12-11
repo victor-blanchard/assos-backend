@@ -121,8 +121,9 @@ router.post("/signin", (req, res) => {
 router.put("/update/:id", async (req, res) => {
   try {
     const userId = req.params.id;
+    const user = await User.findById(userId) 
 
-    if ((token = req.body.token)) {
+    if (user.token !== req.body.token) {
       return res.status(403).json({
         result: false,
         error: "Permission denied",
@@ -136,8 +137,6 @@ router.put("/update/:id", async (req, res) => {
       email: req.body.email,
       birthday: req.body.birthday,
       zipcode: req.body.zipcode,
-      likedEvents: req.body.likedEvents,
-      followingAssociations: req.body.followingAssociations,
     };
 
     const updatedUser = await User.findByIdAndUpdate(
