@@ -89,7 +89,7 @@ router.post("/signin", (req, res) => {
   User.findOne({ email: req.body.email })
     .populate("followingAssociations", "likedEvents")
     .then((data) => {
-      if (bcrypt.compareSync(req.body.password, data.password)) {
+      if (data && bcrypt.compareSync(req.body.password, data.password)) {
         res.json({
           result: true,
           token: data.token,
