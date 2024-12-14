@@ -8,6 +8,8 @@ const { checkBody } = require("../modules/checkBody");
 const bcrypt = require("bcrypt");
 const uid2 = require("uid2");
 
+const { emailService } = require('../modules/emailService');
+
 router.post("/signup", (req, res) => {
   if (
     !checkBody(req.body, [
@@ -19,10 +21,13 @@ router.post("/signup", (req, res) => {
       "zipcode",
     ])
   ) {
+    
     res.json({ result: false, error: "Missing or empty fields" });
     return;
   }
-
+  // emailService.sendEmail('walisylla.esse@gmail.com', 'Bienvenue', 'Nous sommes heureux de vous accueillir', '<b>Hello</b>')
+  // .then(result => console.log('Email sent:', result))
+  // .catch(error => console.error('Error sending email:', error));
   // Check if the user has not already been registered
   User.findOne({ email: req.body.email }).then((data) => {
     if (data === null) {
