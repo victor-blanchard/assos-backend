@@ -4,6 +4,7 @@ var router = express.Router();
 require("../models/connection");
 const User = require("../models/users");
 const Association = require("../models/associations");
+const Event = require("../models/events");
 const { checkBody } = require("../modules/checkBody");
 const bcrypt = require("bcrypt");
 const uid2 = require("uid2");
@@ -126,7 +127,7 @@ router.post("/signin", (req, res) => {
 router.put("/update/:id", async (req, res) => {
   try {
     const userId = req.params.id;
-    const user = await User.findById(userId) 
+    const user = await User.findById(userId);
 
     if (user.token !== req.body.token) {
       return res.status(403).json({
@@ -162,6 +163,190 @@ router.put("/update/:id", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ result: false, error: "Failed to update user" });
+  }
+});
+
+//ROUTE FOR ADDING AN EVENT TO THE LIST
+router.put("/addLikeEvent/:id", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId);
+    const eventId = req.body.eventId;
+    const event = await Event.findById(eventId);
+
+    if (user.token !== req.body.token) {
+      return res.status(403).json({
+        result: false,
+        error: "Permission denied",
+      });
+    }
+
+    if (!event) {
+      return res.status(404).json({ result: false, error: "Event not found" });
+    }
+
+    if (!user.likedEvents) {
+      user.likedEvents = [];
+    }
+
+    if (user.likedEvents.some((event) => event.toString() === eventId)) {
+      return res
+        .status(404)
+        .json({ result: false, error: "Event already in your favorite" });
+    }
+
+    user.likedEvents.push(eventId);
+    await user.save();
+
+    res.json({
+      result: true,
+      message: "Event added to liked events",
+      currentUser: user,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ result: false, error: "Failed to add event" });
+  }
+});
+
+//ROUTE FOR REMOVING AN EVENT FROM THE LIST
+
+router.put("/removeLikeEvent/:id", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId);
+    const eventId = req.body.eventId;
+    const event = await Event.findById(eventId);
+
+    if (user.token !== req.body.token) {
+      return res.status(403).json({
+        result: false,
+        error: "Permission denied",
+      });
+    }
+
+    if (!event) {
+      return res.status(404).json({ result: false, error: "Event not found" });
+    }
+
+    if (!user.likedEvents.some((event) => event.toString() === eventId)) {
+      return res
+        .status(404)
+        .json({
+          result: false,
+          error: "Event cannot be removed from the list as it's not there",
+        });
+    }
+
+    if (!user.likedEvents) {
+      user.likedEvents = [];
+    }
+
+    user.likedEvents = user.likedEvents.filter(
+      (event) => event.toString() !== eventId
+    );
+    await user.save();
+
+    res.json({
+      result: true,
+      message: "Event removed from the list",
+      currentUser: user,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ result: false, error: "Failed to remove event" });
+  }
+});
+
+//ROUTE FOR ADDING AN ASSOCIATION TO THE LIST
+router.put("/addLikeAsso/:id", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId);
+    const assoId = req.body.assoId;
+    const asso = await Association.findById(assoId);
+
+    if (user.token !== req.body.token) {
+      return res.status(403).json({
+        result: false,
+        error: "Permission denied",
+      });
+    }
+
+    if (!asso) {
+      return res.status(404).json({ result: false, error: "Association not found" });
+    }
+
+    if (!user.followingAssociations) {
+      user.followingAssociations = [];
+    }
+
+    if (user.followingAssociations.some((asso) => asso.toString() === assoId)) {
+      return res
+        .status(404)
+        .json({ result: false, error: "Association already in your favorite" });
+    }
+
+    user.followingAssociations.push(assoId);
+    await user.save();
+
+    res.json({
+      result: true,
+      message: "Association added to liked associations",
+      currentUser: user,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ result: false, error: "Failed to add association" });
+  }
+});
+
+//ROUTE FOR REMOVING AN ASSOCIATION FROM THE LIST
+
+router.put("/removeLikeAsso/:id", async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId);
+    const assoId = req.body.assoId;
+    const asso = await Association.findById(assoId);
+
+    if (user.token !== req.body.token) {
+      return res.status(403).json({
+        result: false,
+        error: "Permission denied",
+      });
+    }
+
+    if (!asso) {
+      return res.status(404).json({ result: false, error: "Association not found" });
+    }
+
+    if (!user.followingAssociations.some((asso) => asso.toString() === assoId)) {
+      return res
+        .status(404)
+        .json({
+          result: false,
+          error: "Association cannot be removed from the list as it's not there",
+        });
+    }
+
+    if (!user.followingAssociations) {
+      user.followingAssociations = [];
+    }
+
+    user.followingAssociations = user.followingAssociations.filter(
+      (asso) => asso.toString() !== assoId
+    );
+    await user.save();
+
+    res.json({
+      result: true,
+      message: "Association removed from the list",
+      currentUser: user,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ result: false, error: "Failed to remove association" });
   }
 });
 
