@@ -9,7 +9,12 @@ const Association = require("../models/associations");
 
 //OBTENIR TOUS LES EVENTS DE LA BDD
 router.get("/getAllEvents", (req, res) => {
-  Event.find()
+  const token = req.query.token;
+  const id= req.query.id;
+
+
+  Event.find({organiser: req.query.id })
+
     .populate("organiser")
     .then((data) => {
       res.json({ result: true, events: data });
@@ -82,10 +87,12 @@ router.post("/add", async (req, res) => {
 router.delete("/delete", async (req, res) => {
   try {
     if (!checkBody(req.body, ["_id", "token"])) {
-      return res.json({
+      console.log('checkbody false')
+      res.json({
         result: false,
         error: "event _id and token are required to delete an event from the database",
       });
+      return 
     }
     const event = await Event.findOne({ _id: req.body._id }).populate({
       path: "organiser",

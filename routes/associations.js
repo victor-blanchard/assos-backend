@@ -7,6 +7,25 @@ const User = require("../models/users");
 const Association = require("../models/associations");
 const { checkBody } = require("../modules/checkBody");
 
+
+////START - ROUTE GET SIMPLE ////
+
+router.get("/getasso/:id", async (req, res) => {
+  try {
+    const data = await Association.findOne({_id: req.params.id });
+    if (data) {
+      res.json({ result: true, association: data });
+    } else {
+      res.json({ result: false, error: "Association not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ result: false, error: "ERROR SERVER" });
+  }
+});
+
+//// END - ROUTE GET SIMPLE ////
+
+
 router.post("/create", (req, res) => {
   if (
     !checkBody(req.body, [
