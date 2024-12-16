@@ -7,12 +7,11 @@ const User = require("../models/users");
 const Association = require("../models/associations");
 const { checkBody } = require("../modules/checkBody");
 
-
 ////START - ROUTE GET SIMPLE ////
 
 router.get("/getasso/:id", async (req, res) => {
   try {
-    const data = await Association.findOne({_id: req.params.id });
+    const data = await Association.findOne({ _id: req.params.id });
     if (data) {
       res.json({ result: true, association: data });
     } else {
@@ -29,7 +28,7 @@ router.post("/create", (req, res) => {
   if (
     !checkBody(req.body, [
       "name",
-      "owner",
+      "token",
       "description",
       "siret",
       "email",
@@ -47,23 +46,31 @@ router.post("/create", (req, res) => {
   // Check if the asso has not already been registered
   Association.findOne({ siret: req.body.siret }).then((data) => {
     if (data === null) {
-      const categoriesArray = req.body.categories.split(",");
-      const newAssociation = new Association({
-        name: req.body.name,
-        owner: req.body.owner,
-        description: req.body.description,
-        siret: req.body.siret,
-        email: req.body.email,
-        phone: req.body.phone,
-        address: { street: req.body.street, city: req.body.city, zipcode: req.body.zipcode },
-        categories: categoriesArray,
-      });
+      User.findOne({ token: req.body.token }).then((dataUser) => {
+        if (dataUser != null) {
+          const userId = dataUser._id;
 
-      newAssociation.save().then((newDoc) => {
-        res.json({
-          result: true,
-          newDoc: newDoc,
-        });
+          const categoriesArray = req.body.categories.split(",");
+          const newAssociation = new Association({
+            name: req.body.name,
+            owner: userId,
+            description: req.body.description,
+            siret: req.body.siret,
+            email: req.body.email,
+            phone: req.body.phone,
+            address: { street: req.body.street, city: req.body.city, zipcode: req.body.zipcode },
+            categories: categoriesArray,
+          });
+
+          newAssociation.save().then((newDoc) => {
+            res.json({
+              result: true,
+              newDoc: newDoc,
+            });
+          });
+        } else {
+          res.json({ result: false, error: "No user found for this token" });
+        }
       });
     } else {
       // Asso already exists in database
@@ -214,3 +221,5 @@ router.get("/filtered", async (req, res) => {
 });
 
 module.exports = router;
+
+//commentaire à supprimer après merge
