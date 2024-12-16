@@ -16,5 +16,9 @@
     "morgan": "~1.9.1",
     "node-fetch": "2",
     "uid2": "^1.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
   }
 }
