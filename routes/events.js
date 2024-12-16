@@ -182,7 +182,7 @@ router.put("/update/:id", async (req, res) => {
 router.get("/filtered", async (req, res) => {
   try {
     // Récupération des filtres depuis les query params
-    const { categories, target, isOpenToSubscription, date, location, keyword } = req.query;
+    const { categories, target, openOnly, date, location, keyword } = req.query;
 
     // Construction de l'objet de filtre
     let filters = {};
