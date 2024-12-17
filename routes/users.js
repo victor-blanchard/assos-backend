@@ -9,21 +9,16 @@ const { checkBody } = require("../modules/checkBody");
 const bcrypt = require("bcrypt");
 const uid2 = require("uid2");
 
+const { emailService } = require("../modules/emailService");
+
 router.post("/signup", (req, res) => {
-  if (
-    !checkBody(req.body, [
-      "firstname",
-      "lastname",
-      "email",
-      "password",
-      "birthday",
-      "zipcode",
-    ])
-  ) {
+  if (!checkBody(req.body, ["firstname", "lastname", "email", "password", "birthday", "zipcode"])) {
     res.json({ result: false, error: "Missing or empty fields" });
     return;
   }
-
+  // emailService.sendEmail('walisylla.esse@gmail.com', 'Bienvenue', 'Nous sommes heureux de vous accueillir', '<b>Hello</b>')
+  // .then(result => console.log('Email sent:', result))
+  // .catch(error => console.error('Error sending email:', error));
   // Check if the user has not already been registered
   User.findOne({ email: req.body.email }).then((data) => {
     if (data === null) {
@@ -110,6 +105,8 @@ router.post("/signin", (req, res) => {
           email: data.email,
           birthday: data.birthday,
           zipcode: data.zipcode,
+          likedEvents: data.likedEvents,
+          followingAssociations: data.followingAssociations,
         });
       } else {
         res.json({ result: false, error: "User not found or wrong password" });
@@ -140,11 +137,7 @@ router.put("/update/:id", async (req, res) => {
       zipcode: req.body.zipcode,
     };
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { $set: updateFields },
-      { new: true }
-    );
+    const updatedUser = await User.findByIdAndUpdate(userId, { $set: updateFields }, { new: true });
 
     if (!updatedUser) {
       return res.status(404).json({ result: false, error: "User not found" });
@@ -185,9 +178,7 @@ router.put("/addLikeEvent/:id", async (req, res) => {
     }
 
     if (user.likedEvents.some((event) => event.toString() === eventId)) {
-      return res
-        .status(404)
-        .json({ result: false, error: "Event already in your favorite" });
+      return res.status(404).json({ result: false, error: "Event already in your favorite" });
     }
 
     user.likedEvents.push(eventId);
@@ -225,21 +216,17 @@ router.put("/removeLikeEvent/:id", async (req, res) => {
     }
 
     if (!user.likedEvents.some((event) => event.toString() === eventId)) {
-      return res
-        .status(404)
-        .json({
-          result: false,
-          error: "Event cannot be removed from the list as it's not there",
-        });
+      return res.status(404).json({
+        result: false,
+        error: "Event cannot be removed from the list as it's not there",
+      });
     }
 
     if (!user.likedEvents) {
       user.likedEvents = [];
     }
 
-    user.likedEvents = user.likedEvents.filter(
-      (event) => event.toString() !== eventId
-    );
+    user.likedEvents = user.likedEvents.filter((event) => event.toString() !== eventId);
     await user.save();
 
     res.json({
@@ -277,9 +264,7 @@ router.put("/addLikeAsso/:id", async (req, res) => {
     }
 
     if (user.followingAssociations.some((asso) => asso.toString() === assoId)) {
-      return res
-        .status(404)
-        .json({ result: false, error: "Association already in your favorite" });
+      return res.status(404).json({ result: false, error: "Association already in your favorite" });
     }
 
     user.followingAssociations.push(assoId);
@@ -317,12 +302,10 @@ router.put("/removeLikeAsso/:id", async (req, res) => {
     }
 
     if (!user.followingAssociations.some((asso) => asso.toString() === assoId)) {
-      return res
-        .status(404)
-        .json({
-          result: false,
-          error: "Association cannot be removed from the list as it's not there",
-        });
+      return res.status(404).json({
+        result: false,
+        error: "Association cannot be removed from the list as it's not there",
+      });
     }
 
     if (!user.followingAssociations) {
