@@ -20,6 +20,32 @@ router.get("/getAllEvents", (req, res) => {
     });
 });
 
+//OBTENIR TOUS LES EVENTS DE LA BDD D'UNE ASSO PRECISE
+router.get("/getAllEvents/:id", (req, res) => {
+  Event.find({ organiser: req.params.id })
+    .populate("organiser")
+    .then((data) => {
+      res.json({ result: true, events: data });
+    })
+    .catch((error) => {
+      console.error("Error fetching events:", error);
+      res.json({ result: false, message: "Failed to fetch events", error: error.message });
+    });
+});
+
+//OBTENIR UN EVENT DE LA BDD VIA SON ID
+router.get("/eventById/:id", (req, res) => {
+  Event.findById(req.params.id)
+    .populate("organiser")
+    .then((data) => {
+      res.json({ result: true, event: data });
+    })
+    .catch((error) => {
+      console.error("Error fetching event data:", error);
+      res.json({ result: false, message: "Failed to fetch event's data", error: error.message });
+    });
+});
+
 //CREER UN EVENT DANS LA BDD - RENVOI LE DOCUMENT ENTIER
 router.post("/add", async (req, res) => {
   if (
