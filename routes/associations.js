@@ -11,17 +11,29 @@ const { checkBody } = require("../modules/checkBody");
 
 router.get("/getasso/:token", async (req, res) => {
   try {
+    if(!req.params.token) {
+      console.log('Il n\'y a pas de token');
+      return;
+    }
     const user = await User.findOne({ token: req.params.token });
 
     if (user) {
       // Chercher l'association liée à l'utilisateur
       const association = await Association.findOne({ owner: user._id });
+      
+      if (!association) {
+        console.log('Association not found !');
+        res.json({ result: false, error: 'Asso not found' })
+        return;
+      };
 
       // Retourner les données utilisateur et association
+      const { name, email, description, siret, phone, address, categories, public, id } = association;
+      console.log(name, email, id)
       res.json({
         result: true,
-        user,
-        association,
+        asso: { name, email, description, siret, phone, address, categories, public, id },
+        user: user.token
       });
     } else {
       res.json({ result: false, error: "User not found" });
