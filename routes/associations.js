@@ -9,20 +9,43 @@ const { checkBody } = require("../modules/checkBody");
 
 ////START - ROUTE GET SIMPLE ////
 
-router.get("/getasso/:id", async (req, res) => {
+router.get("/getasso/:token", async (req, res) => {
   try {
-    const data = await Association.findOne({ _id: req.params.id });
-    if (data) {
-      res.json({ result: true, association: data });
+    if(!req.params.token) {
+      console.log('Il n\'y a pas de token');
+      return;
+    }
+    const user = await User.findOne({ token: req.params.token });
+
+    if (user) {
+      // Chercher l'association liée à l'utilisateur
+      const association = await Association.findOne({ owner: user._id });
+      
+      if (!association) {
+        console.log('Association not found !');
+        res.json({ result: false, error: 'Asso not found' })
+        return;
+      };
+
+      // Retourner les données utilisateur et association
+      const { name, email, description, siret, phone, address, categories, public, id } = association;
+      console.log(name, email, id)
+      res.json({
+        result: true,
+        asso: { name, email, description, siret, phone, address, categories, public, id },
+        user: user.token
+      });
     } else {
-      res.json({ result: false, error: "Association not found" });
+      res.json({ result: false, error: "User not found" });
     }
   } catch (error) {
+    console.error("Erreur serveur :", error);
     res.status(500).json({ result: false, error: "ERROR SERVER" });
   }
 });
 
 //// END - ROUTE GET SIMPLE ////
+
 
 router.post("/create", (req, res) => {
   if (
@@ -45,12 +68,14 @@ router.post("/create", (req, res) => {
 
   // Check if the asso has not already been registered
   Association.findOne({ siret: req.body.siret }).then((data) => {
+
     if (data === null) {
       User.findOne({ token: req.body.token }).then((dataUser) => {
+        
         if (dataUser != null) {
           const userId = dataUser._id;
 
-          const categoriesArray = req.body.categories.split(",");
+          // const categoriesArray = req.body.categories.split(",");
           const newAssociation = new Association({
             name: req.body.name,
             owner: userId,
@@ -59,8 +84,9 @@ router.post("/create", (req, res) => {
             email: req.body.email,
             phone: req.body.phone,
             address: { street: req.body.street, city: req.body.city, zipcode: req.body.zipcode },
-            categories: categoriesArray,
+            categories:  req.body.categories,
           });
+          
 
           newAssociation.save().then((newDoc) => {
             res.json({
