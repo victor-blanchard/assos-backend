@@ -207,70 +207,73 @@ router.put("/update/:id", async (req, res) => {
 
 router.get("/filtered", async (req, res) => {
   try {
-    // Récupération des filtres depuis les query params
     const { categories, target, openOnly, date, location, keyword } = req.query;
 
-    // Construction de l'objet de filtre
     let filters = {};
 
-    // Filtrer par catégories multiples
+    // 1. **Filtrer par catégories**
     if (categories) {
-      const categoriesArray = categories.split(",");
-      filters.categories = { $in: categoriesArray }; // Mongoose : catégorie dans le tableau
+      const categoriesArray = categories.split(",").map((cat) => cat.trim());
+      filters.categories = { $in: categoriesArray };
     }
 
+    // 2. **Filtrer par mot-clé dans le nom ou la description**
     if (keyword) {
-      const regex = new RegExp(keyword, "i"); // Crée une expression régulière insensible à la casse
-      filters.$or = [
-        { name: regex }, // Rechercher le mot-clé dans la propriété name
-        { description: regex }, // Rechercher le mot-clé dans la propriété `description`
-      ];
+      const regex = new RegExp(keyword, "i");
+      filters.$or = [{ name: regex }, { description: regex }];
     }
 
+    // 3. **Filtrer par cible/target**
     if (target) {
-      const targetArray = target.split(",");
+      const targetArray = target.split(",").map((t) => t.trim());
       filters.target = { $in: targetArray };
     }
 
+    // 4. **Filtrer par date (fin de l'événement >= date sélectionnée)**
     if (date) {
-      filters.startDate = { $lte: new Date(date) }; //filtre si la date de début est inférieur à la date selectionée
-      filters.endDate = { $gte: new Date(date) }; //filtre si la date de fin est supérieur à la date selectionée
-    }
-    // if (startDate) {
-    //   filters.startDate = { $gte: new Date(startDate) };
-    // }
-
-    // if (endDate) {
-    //   filters.endDate = { $lte: new Date(endDate) };
-    // }
-
-    if (location) {
-      const response = await fetch(
-        `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(location)}`
-      );
-      const data = await response.json();
-
-      if (!data.features || data.features.length === 0) {
-        return res.json({ result: false, error: "Ville non trouvée." });
+      const parsedDate = new Date(date);
+      if (!isNaN(parsedDate)) {
+        filters.endDate = { $gte: parsedDate };
+      } else {
+        return res.status(400).json({ result: false, error: "Date invalide." });
       }
-
-      const firstCity = data.features[0];
-      const searchedCity = {
-        name: firstCity.properties.city,
-        zipcode: firstCity.properties.postcode,
-      };
-
-      filters["address.zipcode"] = { $regex: `^${searchedCity.zipcode.slice(0, 2)}` };
     }
 
-    // Recherche avec Mongoose
+    // 5. **Filtrer par lieu/location** en utilisant API publique de data.gouv
+    if (location) {
+      try {
+        const response = await fetch(
+          `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(location)}`
+        );
+        const data = await response.json();
+
+        if (!data.features || data.features.length === 0) {
+          return res.json({ result: false, error: "Ville non trouvée." });
+        }
+
+        const firstCity = data.features[0];
+        const zipcode = firstCity.properties.postcode;
+        filters["address.zipcode"] = { $regex: `^${zipcode.slice(0, 2)}` };
+      } catch (fetchError) {
+        console.error("Erreur API d'adresse :", fetchError);
+        return res
+          .status(500)
+          .json({ result: false, error: "Erreur lors de la récupération de la localisation." });
+      }
+    }
+
+    // 6. **Option openOnly** (Exemple supplémentaire si nécessaire)
+    if (openOnly == "true") {
+      filters.limitDate = { $gte: new Date().toDateString() };
+    }
+
+    // **Récupération des événements**
     const events = await Event.find(filters).populate("organiser");
 
-    // Réponse JSON
-    res.status(200).json({ result: true, filters: filters, events: events });
+    res.status(200).json({ result: true, filters, events });
   } catch (error) {
     console.error("Erreur dans le filtrage :", error);
-    res.status(500).json({ error: "Une erreur est survenue." });
+    res.status(500).json({ result: false, error: "Une erreur est survenue sur le serveur." });
   }
 });
 
