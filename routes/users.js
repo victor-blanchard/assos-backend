@@ -371,7 +371,7 @@ router.put("/removeLikeAsso/:token", async (req, res) => {
 
 router.get("/getUserLikedEvents/:token", async (req, res) => {
   try {
-    const data = await User.findOne({ token: req.params.token });
+    const data = await User.findOne({ token: req.params.token }).populate("likedEvents");
     if (data) {
       res.json({ result: true, likedEvents: data.likedEvents });
     } else {
@@ -384,7 +384,7 @@ router.get("/getUserLikedEvents/:token", async (req, res) => {
 
 router.get("/followingAssociations/:token", async (req, res) => {
   try {
-    const data = await User.findOne({ token: req.params.token });
+    const data = await User.findOne({ token: req.params.token }).populate("followingAssociations");
     if (data) {
       res.json({ result: true, followingAssociations: data.followingAssociations });
     } else {
