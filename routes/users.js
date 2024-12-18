@@ -12,7 +12,16 @@ const uid2 = require("uid2");
 const { emailService } = require("../modules/emailService");
 
 router.post("/signup", (req, res) => {
-  if (!checkBody(req.body, ["firstname", "lastname", "email", "password", "birthday", "zipcode"])) {
+  if (
+    !checkBody(req.body, [
+      "firstname",
+      "lastname",
+      "email",
+      "password",
+      "birthday",
+      "zipcode",
+    ])
+  ) {
     res.json({ result: false, error: "Missing or empty fields" });
     return;
   }
@@ -116,10 +125,15 @@ router.post("/signin", (req, res) => {
 
 //// MEHMET TRAVAILLE A PARTIR DE CETTE LIGNE///////////////////////////////////////////
 
-router.put("/update/:id", async (req, res) => {
+router.put("/update/:token", async (req, res) => {
   try {
-    const userId = req.params.id;
-    const user = await User.findById(userId);
+    const token = req.params.token;
+
+    const user = await User.findOne({ token: token });
+
+    if (!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
 
     if (user.token !== req.body.token) {
       return res.status(403).json({
@@ -128,16 +142,21 @@ router.put("/update/:id", async (req, res) => {
       });
     }
 
-    // Define which fields to be updated
-    const updateFields = {
-      firstname: req.body.firstname,
-      lastname: req.body.lastname,
-      email: req.body.email,
-      birthday: req.body.birthday,
-      zipcode: req.body.zipcode,
-    };
+    const updateFields = {};
+    if (req.body.firstname) updateFields.firstname = req.body.firstname;
+    if (req.body.lastname) updateFields.lastname = req.body.lastname;
+    if (req.body.email) updateFields.email = req.body.email;
+    if (req.body.birthday) updateFields.birthday = req.body.birthday;
+    if (req.body.zipcode) updateFields.zipcode = req.body.zipcode;
+    if (req.body.followingAssociations)
+      updateFields.followingAssociations = req.body.followingAssociations;
+    if (req.body.likedEvents) updateFields.likedEvents = req.body.likedEvents;
 
-    const updatedUser = await User.findByIdAndUpdate(userId, { $set: updateFields }, { new: true });
+    const updatedUser = await User.findOneAndUpdate(
+      { token: token },
+      { $set: updateFields },
+      { new: true }
+    );
 
     if (!updatedUser) {
       return res.status(404).json({ result: false, error: "User not found" });
@@ -150,15 +169,25 @@ router.put("/update/:id", async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ result: false, error: "Failed to update user" });
+    res.status(500).json({
+      result: false,
+      error: "Failed to update user",
+      details: error.message,
+    });
   }
 });
 
 //ROUTE FOR ADDING AN EVENT TO THE LIST
-router.put("/addLikeEvent/:id", async (req, res) => {
+router.put("/addLikeEvent/:token", async (req, res) => {
   try {
-    const userId = req.params.id;
-    const user = await User.findById(userId);
+    const token = req.params.token;
+
+    const user = await User.findOne({ token: token });
+
+    if (!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
+
     const eventId = req.body.eventId;
     const event = await Event.findById(eventId);
 
@@ -178,7 +207,9 @@ router.put("/addLikeEvent/:id", async (req, res) => {
     }
 
     if (user.likedEvents.some((event) => event.toString() === eventId)) {
-      return res.status(404).json({ result: false, error: "Event already in your favorite" });
+      return res
+        .status(404)
+        .json({ result: false, error: "Event already in your favorite" });
     }
 
     user.likedEvents.push(eventId);
@@ -197,10 +228,16 @@ router.put("/addLikeEvent/:id", async (req, res) => {
 
 //ROUTE FOR REMOVING AN EVENT FROM THE LIST
 
-router.put("/removeLikeEvent/:id", async (req, res) => {
+router.put("/removeLikeEvent/:token", async (req, res) => {
   try {
-    const userId = req.params.id;
-    const user = await User.findById(userId);
+    const token = req.params.token;
+
+    const user = await User.findOne({ token: token });
+
+    if (!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
+
     const eventId = req.body.eventId;
     const event = await Event.findById(eventId);
 
@@ -226,7 +263,9 @@ router.put("/removeLikeEvent/:id", async (req, res) => {
       user.likedEvents = [];
     }
 
-    user.likedEvents = user.likedEvents.filter((event) => event.toString() !== eventId);
+    user.likedEvents = user.likedEvents.filter(
+      (event) => event.toString() !== eventId
+    );
     await user.save();
 
     res.json({
@@ -241,10 +280,16 @@ router.put("/removeLikeEvent/:id", async (req, res) => {
 });
 
 //ROUTE FOR ADDING AN ASSOCIATION TO THE LIST
-router.put("/addLikeAsso/:id", async (req, res) => {
+router.put("/addLikeAsso/:token", async (req, res) => {
   try {
-    const userId = req.params.id;
-    const user = await User.findById(userId);
+    const token = req.params.token;
+
+    const user = await User.findOne({ token: token });
+
+    if (!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
+
     const assoId = req.body.assoId;
     const asso = await Association.findById(assoId);
 
@@ -256,7 +301,9 @@ router.put("/addLikeAsso/:id", async (req, res) => {
     }
 
     if (!asso) {
-      return res.status(404).json({ result: false, error: "Association not found" });
+      return res
+        .status(404)
+        .json({ result: false, error: "Association not found" });
     }
 
     if (!user.followingAssociations) {
@@ -264,7 +311,9 @@ router.put("/addLikeAsso/:id", async (req, res) => {
     }
 
     if (user.followingAssociations.some((asso) => asso.toString() === assoId)) {
-      return res.status(404).json({ result: false, error: "Association already in your favorite" });
+      return res
+        .status(404)
+        .json({ result: false, error: "Association already in your favorite" });
     }
 
     user.followingAssociations.push(assoId);
@@ -283,10 +332,16 @@ router.put("/addLikeAsso/:id", async (req, res) => {
 
 //ROUTE FOR REMOVING AN ASSOCIATION FROM THE LIST
 
-router.put("/removeLikeAsso/:id", async (req, res) => {
+router.put("/removeLikeAsso/:token", async (req, res) => {
   try {
-    const userId = req.params.id;
-    const user = await User.findById(userId);
+    const token = req.params.token;
+
+    const user = await User.findOne({ token: token });
+
+    if (!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
+
     const assoId = req.body.assoId;
     const asso = await Association.findById(assoId);
 
@@ -298,10 +353,14 @@ router.put("/removeLikeAsso/:id", async (req, res) => {
     }
 
     if (!asso) {
-      return res.status(404).json({ result: false, error: "Association not found" });
+      return res
+        .status(404)
+        .json({ result: false, error: "Association not found" });
     }
 
-    if (!user.followingAssociations.some((asso) => asso.toString() === assoId)) {
+    if (
+      !user.followingAssociations.some((asso) => asso.toString() === assoId)
+    ) {
       return res.status(404).json({
         result: false,
         error: "Association cannot be removed from the list as it's not there",
@@ -324,7 +383,9 @@ router.put("/removeLikeAsso/:id", async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ result: false, error: "Failed to remove association" });
+    res
+      .status(500)
+      .json({ result: false, error: "Failed to remove association" });
   }
 });
 
