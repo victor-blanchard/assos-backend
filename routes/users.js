@@ -12,16 +12,7 @@ const uid2 = require("uid2");
 const { emailService } = require("../modules/emailService");
 
 router.post("/signup", (req, res) => {
-  if (
-    !checkBody(req.body, [
-      "firstname",
-      "lastname",
-      "email",
-      "password",
-      "birthday",
-      "zipcode",
-    ])
-  ) {
+  if (!checkBody(req.body, ["firstname", "lastname", "email", "password", "birthday", "zipcode"])) {
     res.json({ result: false, error: "Missing or empty fields" });
     return;
   }
@@ -180,49 +171,48 @@ router.put("/update/:token", async (req, res) => {
 //ROUTE FOR ADDING AN EVENT TO THE LIST
 router.put("/addLikeEvent/:token", async (req, res) => {
   try {
-    const token = req.params.token;
+    // Récupération des paramètres
+    const { token } = req.params;
+    const eventId = req.body.eventId;
 
-    const user = await User.findOne({ token: token });
+    // Vérification des entrées
+    if (!eventId) {
+      return res.status(400).json({ result: false, error: "Event ID is required" });
+    }
 
+    // Récupération de l'utilisateur
+    const user = await User.findOne({ token }).populate("followingAssociations", "likedEvents");
     if (!user) {
       return res.status(404).json({ result: false, error: "User not found" });
     }
 
-    const eventId = req.body.eventId;
+    // Vérification de l'événement
     const event = await Event.findById(eventId);
-
-    if (user.token !== req.body.token) {
-      return res.status(403).json({
-        result: false,
-        error: "Permission denied",
-      });
-    }
-
     if (!event) {
       return res.status(404).json({ result: false, error: "Event not found" });
     }
 
+    // Vérification si l'événement est déjà liké
     if (!user.likedEvents) {
-      user.likedEvents = [];
+      user.likedEvents = []; // Initialisation si le tableau n'existe pas
+    }
+    if (user.likedEvents.includes(eventId)) {
+      return res.status(400).json({ result: false, error: "Event already in your favorites" });
     }
 
-    if (user.likedEvents.some((event) => event.toString() === eventId)) {
-      return res
-        .status(404)
-        .json({ result: false, error: "Event already in your favorite" });
-    }
-
+    // Ajout de l'événement
     user.likedEvents.push(eventId);
     await user.save();
 
-    res.json({
+    // Réponse réussie
+    return res.json({
       result: true,
       message: "Event added to liked events",
-      currentUser: user,
+      likedEvents: user.likedEvents,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ result: false, error: "Failed to add event" });
+    console.error("Error in addLikeEvent:", error);
+    return res.status(500).json({ result: false, error: "Failed to add event" });
   }
 });
 
@@ -263,9 +253,7 @@ router.put("/removeLikeEvent/:token", async (req, res) => {
       user.likedEvents = [];
     }
 
-    user.likedEvents = user.likedEvents.filter(
-      (event) => event.toString() !== eventId
-    );
+    user.likedEvents = user.likedEvents.filter((event) => event.toString() !== eventId);
     await user.save();
 
     res.json({
@@ -301,9 +289,7 @@ router.put("/addLikeAsso/:token", async (req, res) => {
     }
 
     if (!asso) {
-      return res
-        .status(404)
-        .json({ result: false, error: "Association not found" });
+      return res.status(404).json({ result: false, error: "Association not found" });
     }
 
     if (!user.followingAssociations) {
@@ -311,9 +297,7 @@ router.put("/addLikeAsso/:token", async (req, res) => {
     }
 
     if (user.followingAssociations.some((asso) => asso.toString() === assoId)) {
-      return res
-        .status(404)
-        .json({ result: false, error: "Association already in your favorite" });
+      return res.status(404).json({ result: false, error: "Association already in your favorite" });
     }
 
     user.followingAssociations.push(assoId);
@@ -353,14 +337,10 @@ router.put("/removeLikeAsso/:token", async (req, res) => {
     }
 
     if (!asso) {
-      return res
-        .status(404)
-        .json({ result: false, error: "Association not found" });
+      return res.status(404).json({ result: false, error: "Association not found" });
     }
 
-    if (
-      !user.followingAssociations.some((asso) => asso.toString() === assoId)
-    ) {
+    if (!user.followingAssociations.some((asso) => asso.toString() === assoId)) {
       return res.status(404).json({
         result: false,
         error: "Association cannot be removed from the list as it's not there",
@@ -383,12 +363,36 @@ router.put("/removeLikeAsso/:token", async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ result: false, error: "Failed to remove association" });
+    res.status(500).json({ result: false, error: "Failed to remove association" });
   }
 });
 
 /// MEHMET TRAVAILLE JUSQUA CETTE LIGNE/////////////////////////////
+
+router.get("/getUserLikedEvents/:token", async (req, res) => {
+  try {
+    const data = await User.findOne({ token: req.params.token });
+    if (data) {
+      res.json({ result: true, likedEvents: data.likedEvents });
+    } else {
+      res.json({ result: false, error: "User not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ result: false, error: "ERROR SERVER" });
+  }
+});
+
+router.get("/followingAssociations/:token", async (req, res) => {
+  try {
+    const data = await User.findOne({ token: req.params.token });
+    if (data) {
+      res.json({ result: true, followingAssociations: data.followingAssociations });
+    } else {
+      res.json({ result: false, error: "User not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ result: false, error: "ERROR SERVER" });
+  }
+});
 
 module.exports = router;
