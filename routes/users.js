@@ -8,6 +8,9 @@ const Event = require("../models/events");
 const { checkBody } = require("../modules/checkBody");
 const bcrypt = require("bcrypt");
 const uid2 = require("uid2");
+const uniqid = require('uniqid');
+const cloudinary = require('cloudinary').v2;
+const fs = require('fs');
 
 const { emailService } = require("../modules/emailService");
 
@@ -99,6 +102,7 @@ router.post("/signin", (req, res) => {
         res.json({
           result: true,
           token: data.token,
+          photoUrl: data.photoUrl || null,
           isAssociationOwner: data.isAssociationOwner,
           firstname: data.firstname,
           lastname: data.lastname,
@@ -391,5 +395,68 @@ router.get("/followingAssociations/:token", async (req, res) => {
     res.status(500).json({ result: false, error: "ERROR SERVER" });
   }
 });
+
+
+//Photo
+
+router.post('/upload', async (req, res) => {
+  
+  try {
+    if (!req.files || !req.files.file) {
+      return res.status(400).json({ result: false, message: 'Aucun fichier fourni' });
+    };
+
+    const token = req.body.token; // token transmis dans le corps de la requête
+    const userId = await User.findOne({ token }).select('_id');//recup de l'id user
+    console.log(userId);
+    if (!userId) {
+      return res.json({ result: false, message: 'Utilisateur non trouvé' });
+    };
+
+    const photoPath = `./tmp/${uniqid()}.jpg`;
+    console.log('REQ.FILE =>', req.files.photoPath)
+    const resultMove = await req.files.file.mv(photoPath);
+    console.log(resultMove)
+    
+    if (!resultMove) {
+      // const resultCloudinary = await cloudinary.uploader.upload(photoPath);
+      // fs.unlinkSync(photoPath);
+      const resultCloudinary = await cloudinary.uploader.upload(photoPath, {
+        public_id: `${uniqid()}` 
+      });
+      fs.unlinkSync(photoPath);
+      
+      //Mise à jour de l'utilisateur dans la bdd
+        const updateResult = await User.updateOne(
+          { _id: userId._id },
+          {
+            photoUrl: resultCloudinary.secure_url,
+            publicId: resultCloudinary.public_id
+          }
+        );
+        console.log('updateResult =>', updateResult)
+        if (updateResult.modifiedCount > 0) {
+          res.json({
+            result: true,
+            url: resultCloudinary.secure_url,
+            publicId: resultCloudinary.public_id,
+          })
+        } else {
+          res.json({ result: false, message: 'Erreur lors de la mise à jour de l\'utilisateur' })
+        }
+
+    
+    } else {
+      res.json({ result: false, error: resultMove });
+    }
+  }catch(error) {
+    console.error('Erreur lors de la recuperation de l\'image')
+    res.json({result: false})
+  }
+  
+});
+//Delete photo
+
+router.delete('/removephoto', (req, res) => {});
 
 module.exports = router;
