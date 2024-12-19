@@ -10,7 +10,7 @@ const userSchema = mongoose.Schema({
   zipcode: Number,
   token: String,
   photoUrl: String,
-  publiId: String,
+  publicId: String,
   likedEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: "events" }],
   followingAssociations: [{ type: mongoose.Schema.Types.ObjectId, ref: "associations" }],
 });

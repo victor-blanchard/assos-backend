@@ -39,6 +39,8 @@ router.post("/signup", (req, res) => {
           token: uid2(32),
           likedEvents: null,
           followingAssociations: null,
+          photoUrl: req.body.photoUrl || null, 
+          publicId: req.body.publicId || null,  
         });
 
         newUser.save().then((newDoc) => {
@@ -68,6 +70,9 @@ router.post("/signup", (req, res) => {
           token: uid2(32),
           likedEvents: [],
           followingAssociations: [],
+          photoUrl: req.body.photoUrl || null, 
+          publicId: req.body.publicId || null,
+
         });
         newUser.save().then((newDoc) => {
           res.json({
@@ -99,10 +104,13 @@ router.post("/signin", (req, res) => {
     .populate("followingAssociations", "likedEvents")
     .then((data) => {
       if (data && bcrypt.compareSync(req.body.password, data.password)) {
+        console.log(data);
+        
         res.json({
           result: true,
           token: data.token,
-          photoUrl: data.photoUrl || null,
+          photoUrl: data.photoUrl, 
+          publicId: data.publicId,
           isAssociationOwner: data.isAssociationOwner,
           firstname: data.firstname,
           lastname: data.lastname,
@@ -405,7 +413,8 @@ router.post('/upload', async (req, res) => {
     if (!req.files || !req.files.file) {
       return res.status(400).json({ result: false, message: 'Aucun fichier fourni' });
     };
-
+    console.log("coucou",req.body);
+    
     const token = req.body.token; // token transmis dans le corps de la requête
     const userId = await User.findOne({ token }).select('_id');//recup de l'id user
     console.log(userId);
@@ -414,9 +423,7 @@ router.post('/upload', async (req, res) => {
     };
 
     const photoPath = `./tmp/${uniqid()}.jpg`;
-    console.log('REQ.FILE =>', req.files.photoPath)
     const resultMove = await req.files.file.mv(photoPath);
-    console.log(resultMove)
     
     if (!resultMove) {
       // const resultCloudinary = await cloudinary.uploader.upload(photoPath);
@@ -425,6 +432,11 @@ router.post('/upload', async (req, res) => {
         public_id: `${uniqid()}` 
       });
       fs.unlinkSync(photoPath);
+
+      
+
+      console.log("ResultCloudinary", resultCloudinary);
+      
       
       //Mise à jour de l'utilisateur dans la bdd
         const updateResult = await User.updateOne(
@@ -438,7 +450,7 @@ router.post('/upload', async (req, res) => {
         if (updateResult.modifiedCount > 0) {
           res.json({
             result: true,
-            url: resultCloudinary.secure_url,
+            photoUrl: resultCloudinary.secure_url,
             publicId: resultCloudinary.public_id,
           })
         } else {
