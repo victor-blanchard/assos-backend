@@ -247,36 +247,7 @@ router.get("/filtered", async (req, res) => {
 });
 
 
-//Photo
 
-router.post('/upload', async (req, res) => {
-  
-  try {
-    const photoPath = `./tmp/${uniqid()}.jpg`;
-    const resultMove = await req.files.file.mv(photoPath);
-    console.log(resultMove)
-   
-    if (!resultMove) {
-      const resultCloudinary = await cloudinary.uploader.upload(photoPath);
-      fs.unlinkSync(photoPath);
-      console.log('REQ.FILE =>', req.files.photoPath)
-
-
-      res.json({ result: true, url: resultCloudinary.secure_url });  
-    } else {
-      res.json({ result: false, error: resultMove });
-    }
-  }catch(error) {
-    console.error('Erreur lors de la recuperation de l\'image')
-    res.json({result: false})
-  }
-  
-});
-//Delete photo
-
-router.delete('/removephoto', (req, res) => {});
-
-module.exports = router;
 router.get("/getAssoInfos/:id", async (req, res) => {
   try {
     const data = await Association.findOne({ _id: req.params.id });
@@ -291,3 +262,4 @@ router.get("/getAssoInfos/:id", async (req, res) => {
 });
 
 module.exports = router;
+

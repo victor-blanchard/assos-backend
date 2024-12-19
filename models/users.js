@@ -9,6 +9,8 @@ const userSchema = mongoose.Schema({
   birthday: Date,
   zipcode: Number,
   token: String,
+  photoUrl: String,
+  publiId: String,
   likedEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: "events" }],
   followingAssociations: [{ type: mongoose.Schema.Types.ObjectId, ref: "associations" }],
 });
