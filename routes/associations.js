@@ -14,8 +14,8 @@ const fs = require('fs');
 
 router.get("/getasso/:token", async (req, res) => {
   try {
-    if(!req.params.token) {
-      console.log('Il n\'y a pas de token');
+    if (!req.params.token) {
+      console.log("Il n'y a pas de token");
       return;
     }
     const user = await User.findOne({ token: req.params.token });
@@ -23,20 +23,21 @@ router.get("/getasso/:token", async (req, res) => {
     if (user) {
       // Chercher l'association liée à l'utilisateur
       const association = await Association.findOne({ owner: user._id });
-      
+
       if (!association) {
-        console.log('Association not found !');
-        res.json({ result: false, error: 'Asso not found' })
+        console.log("Association not found !");
+        res.json({ result: false, error: "Asso not found" });
         return;
-      };
+      }
 
       // Retourner les données utilisateur et association
-      const { name, email, description, siret, phone, address, categories, public, id } = association;
-      console.log(name, email, id)
+      const { name, email, description, siret, phone, address, categories, public, id } =
+        association;
+      console.log(name, email, id);
       res.json({
         result: true,
         asso: { name, email, description, siret, phone, address, categories, public, id },
-        user: user.token
+        user: user.token,
       });
     } else {
       res.json({ result: false, error: "User not found" });
@@ -48,7 +49,6 @@ router.get("/getasso/:token", async (req, res) => {
 });
 
 //// END - ROUTE GET SIMPLE ////
-
 
 router.post("/create", (req, res) => {
   if (
@@ -71,10 +71,8 @@ router.post("/create", (req, res) => {
 
   // Check if the asso has not already been registered
   Association.findOne({ siret: req.body.siret }).then((data) => {
-
     if (data === null) {
       User.findOne({ token: req.body.token }).then((dataUser) => {
-        
         if (dataUser != null) {
           const userId = dataUser._id;
 
@@ -87,9 +85,8 @@ router.post("/create", (req, res) => {
             email: req.body.email,
             phone: req.body.phone,
             address: { street: req.body.street, city: req.body.city, zipcode: req.body.zipcode },
-            categories:  req.body.categories,
+            categories: req.body.categories,
           });
-          
 
           newAssociation.save().then((newDoc) => {
             res.json({
@@ -249,6 +246,7 @@ router.get("/filtered", async (req, res) => {
   }
 });
 
+<<<<<<< HEAD
 
 //Photo
 
@@ -280,5 +278,19 @@ router.post('/upload', async (req, res) => {
 router.delete('/removephoto', (req, res) => {});
 
 module.exports = router;
+=======
+router.get("/getAssoInfos/:id", async (req, res) => {
+  try {
+    const data = await Association.findOne({ _id: req.params.id });
+    if (data) {
+      res.json({ result: true, association: data });
+    } else {
+      res.json({ result: false, error: "Association not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ result: false, error: "ERROR SERVER" });
+  }
+});
+>>>>>>> 7fa22917a2f73977e33975d319e64d2b8c269175
 
-//commentaire à supprimer après merge
+module.exports = router;

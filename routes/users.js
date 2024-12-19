@@ -116,10 +116,15 @@ router.post("/signin", (req, res) => {
 
 //// MEHMET TRAVAILLE A PARTIR DE CETTE LIGNE///////////////////////////////////////////
 
-router.put("/update/:id", async (req, res) => {
+router.put("/update/:token", async (req, res) => {
   try {
-    const userId = req.params.id;
-    const user = await User.findById(userId);
+    const token = req.params.token;
+
+    const user = await User.findOne({ token: token });
+
+    if (!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
 
     if (user.token !== req.body.token) {
       return res.status(403).json({
@@ -128,16 +133,21 @@ router.put("/update/:id", async (req, res) => {
       });
     }
 
-    // Define which fields to be updated
-    const updateFields = {
-      firstname: req.body.firstname,
-      lastname: req.body.lastname,
-      email: req.body.email,
-      birthday: req.body.birthday,
-      zipcode: req.body.zipcode,
-    };
+    const updateFields = {};
+    if (req.body.firstname) updateFields.firstname = req.body.firstname;
+    if (req.body.lastname) updateFields.lastname = req.body.lastname;
+    if (req.body.email) updateFields.email = req.body.email;
+    if (req.body.birthday) updateFields.birthday = req.body.birthday;
+    if (req.body.zipcode) updateFields.zipcode = req.body.zipcode;
+    if (req.body.followingAssociations)
+      updateFields.followingAssociations = req.body.followingAssociations;
+    if (req.body.likedEvents) updateFields.likedEvents = req.body.likedEvents;
 
-    const updatedUser = await User.findByIdAndUpdate(userId, { $set: updateFields }, { new: true });
+    const updatedUser = await User.findOneAndUpdate(
+      { token: token },
+      { $set: updateFields },
+      { new: true }
+    );
 
     if (!updatedUser) {
       return res.status(404).json({ result: false, error: "User not found" });
@@ -150,57 +160,74 @@ router.put("/update/:id", async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ result: false, error: "Failed to update user" });
+    res.status(500).json({
+      result: false,
+      error: "Failed to update user",
+      details: error.message,
+    });
   }
 });
 
 //ROUTE FOR ADDING AN EVENT TO THE LIST
-router.put("/addLikeEvent/:id", async (req, res) => {
+router.put("/addLikeEvent/:token", async (req, res) => {
   try {
-    const userId = req.params.id;
-    const user = await User.findById(userId);
+    // Récupération des paramètres
+    const { token } = req.params;
     const eventId = req.body.eventId;
-    const event = await Event.findById(eventId);
 
-    if (user.token !== req.body.token) {
-      return res.status(403).json({
-        result: false,
-        error: "Permission denied",
-      });
+    // Vérification des entrées
+    if (!eventId) {
+      return res.status(400).json({ result: false, error: "Event ID is required" });
     }
 
+    // Récupération de l'utilisateur
+    const user = await User.findOne({ token }).populate("followingAssociations", "likedEvents");
+    if (!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
+
+    // Vérification de l'événement
+    const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ result: false, error: "Event not found" });
     }
 
+    // Vérification si l'événement est déjà liké
     if (!user.likedEvents) {
-      user.likedEvents = [];
+      user.likedEvents = []; // Initialisation si le tableau n'existe pas
+    }
+    if (user.likedEvents.includes(eventId)) {
+      return res.status(400).json({ result: false, error: "Event already in your favorites" });
     }
 
-    if (user.likedEvents.some((event) => event.toString() === eventId)) {
-      return res.status(404).json({ result: false, error: "Event already in your favorite" });
-    }
-
+    // Ajout de l'événement
     user.likedEvents.push(eventId);
     await user.save();
 
-    res.json({
+    // Réponse réussie
+    return res.json({
       result: true,
       message: "Event added to liked events",
-      currentUser: user,
+      likedEvents: user.likedEvents,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ result: false, error: "Failed to add event" });
+    console.error("Error in addLikeEvent:", error);
+    return res.status(500).json({ result: false, error: "Failed to add event" });
   }
 });
 
 //ROUTE FOR REMOVING AN EVENT FROM THE LIST
 
-router.put("/removeLikeEvent/:id", async (req, res) => {
+router.put("/removeLikeEvent/:token", async (req, res) => {
   try {
-    const userId = req.params.id;
-    const user = await User.findById(userId);
+    const token = req.params.token;
+
+    const user = await User.findOne({ token: token });
+
+    if (!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
+
     const eventId = req.body.eventId;
     const event = await Event.findById(eventId);
 
@@ -241,10 +268,16 @@ router.put("/removeLikeEvent/:id", async (req, res) => {
 });
 
 //ROUTE FOR ADDING AN ASSOCIATION TO THE LIST
-router.put("/addLikeAsso/:id", async (req, res) => {
+router.put("/addLikeAsso/:token", async (req, res) => {
   try {
-    const userId = req.params.id;
-    const user = await User.findById(userId);
+    const token = req.params.token;
+
+    const user = await User.findOne({ token: token });
+
+    if (!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
+
     const assoId = req.body.assoId;
     const asso = await Association.findById(assoId);
 
@@ -283,10 +316,16 @@ router.put("/addLikeAsso/:id", async (req, res) => {
 
 //ROUTE FOR REMOVING AN ASSOCIATION FROM THE LIST
 
-router.put("/removeLikeAsso/:id", async (req, res) => {
+router.put("/removeLikeAsso/:token", async (req, res) => {
   try {
-    const userId = req.params.id;
-    const user = await User.findById(userId);
+    const token = req.params.token;
+
+    const user = await User.findOne({ token: token });
+
+    if (!user) {
+      return res.status(404).json({ result: false, error: "User not found" });
+    }
+
     const assoId = req.body.assoId;
     const asso = await Association.findById(assoId);
 
@@ -329,5 +368,31 @@ router.put("/removeLikeAsso/:id", async (req, res) => {
 });
 
 /// MEHMET TRAVAILLE JUSQUA CETTE LIGNE/////////////////////////////
+
+router.get("/getUserLikedEvents/:token", async (req, res) => {
+  try {
+    const data = await User.findOne({ token: req.params.token }).populate("likedEvents");
+    if (data) {
+      res.json({ result: true, likedEvents: data.likedEvents });
+    } else {
+      res.json({ result: false, error: "User not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ result: false, error: "ERROR SERVER" });
+  }
+});
+
+router.get("/followingAssociations/:token", async (req, res) => {
+  try {
+    const data = await User.findOne({ token: req.params.token }).populate("followingAssociations");
+    if (data) {
+      res.json({ result: true, followingAssociations: data.followingAssociations });
+    } else {
+      res.json({ result: false, error: "User not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ result: false, error: "ERROR SERVER" });
+  }
+});
 
 module.exports = router;
