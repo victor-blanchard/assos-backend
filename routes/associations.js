@@ -246,7 +246,6 @@ router.get("/filtered", async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
 
 //Photo
 
@@ -278,7 +277,6 @@ router.post('/upload', async (req, res) => {
 router.delete('/removephoto', (req, res) => {});
 
 module.exports = router;
-=======
 router.get("/getAssoInfos/:id", async (req, res) => {
   try {
     const data = await Association.findOne({ _id: req.params.id });
@@ -291,6 +289,5 @@ router.get("/getAssoInfos/:id", async (req, res) => {
     res.status(500).json({ result: false, error: "ERROR SERVER" });
   }
 });
->>>>>>> 7fa22917a2f73977e33975d319e64d2b8c269175
 
 module.exports = router;
