@@ -215,34 +215,31 @@ router.put("/addLikeEvent/:token", async (req, res) => {
     return res.status(500).json({ result: false, error: "Failed to add event" });
   }
 });
-
 //ROUTE FOR REMOVING AN EVENT FROM THE LIST
 
 router.put("/removeLikeEvent/:token", async (req, res) => {
   try {
-    const token = req.params.token;
+    const { token } = req.params;
+    const eventId = req.body.eventId;
 
-    const user = await User.findOne({ token: token });
+    // Vérification des entrées
+    if (!eventId) {
+      return res.status(400).json({ result: false, error: "Event ID is required" });
+    }
 
+    // Récupération de l'utilisateur
+    const user = await User.findOne({ token }).populate("followingAssociations", "likedEvents");
     if (!user) {
       return res.status(404).json({ result: false, error: "User not found" });
     }
 
-    const eventId = req.body.eventId;
+    // Vérification de l'événement
     const event = await Event.findById(eventId);
-
-    if (user.token !== req.body.token) {
-      return res.status(403).json({
-        result: false,
-        error: "Permission denied",
-      });
-    }
-
     if (!event) {
       return res.status(404).json({ result: false, error: "Event not found" });
     }
 
-    if (!user.likedEvents.some((event) => event.toString() === eventId)) {
+    if (!user.likedEvents.some((event) => event.toString() == eventId)) {
       return res.status(404).json({
         result: false,
         error: "Event cannot be removed from the list as it's not there",
@@ -253,13 +250,13 @@ router.put("/removeLikeEvent/:token", async (req, res) => {
       user.likedEvents = [];
     }
 
-    user.likedEvents = user.likedEvents.filter((event) => event.toString() !== eventId);
+    user.likedEvents = user.likedEvents.filter((event) => event.toString() != eventId);
     await user.save();
 
     res.json({
       result: true,
       message: "Event removed from the list",
-      currentUser: user,
+      likedEvents: user.likedEvents,
     });
   } catch (error) {
     console.error(error);
