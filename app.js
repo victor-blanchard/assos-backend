@@ -9,6 +9,8 @@ var eventsRouter = require("./routes/events");
 var associationsRouter = require("./routes/associations");
 
 var app = express();
+const fileUpload = require('express-fileupload');
+app.use(fileUpload());
 const cors = require("cors");
 app.use(cors());
 app.use(logger("dev"));
