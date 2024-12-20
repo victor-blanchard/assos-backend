@@ -419,8 +419,6 @@ router.post('/upload', async (req, res) => {
     console.log(resultMove)
     
     if (!resultMove) {
-      // const resultCloudinary = await cloudinary.uploader.upload(photoPath);
-      // fs.unlinkSync(photoPath);
       const resultCloudinary = await cloudinary.uploader.upload(photoPath, {
         public_id: `${uniqid()}` 
       });
@@ -438,7 +436,7 @@ router.post('/upload', async (req, res) => {
         if (updateResult.modifiedCount > 0) {
           res.json({
             result: true,
-            url: resultCloudinary.secure_url,
+            photoUrl: resultCloudinary.secure_url,
             publicId: resultCloudinary.public_id,
           })
         } else {
